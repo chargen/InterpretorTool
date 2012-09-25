@@ -3,18 +3,114 @@
 
 import argparse
 
-def doPrimitive(tokens, patterns):
-	""" tokens nach Kommandozeilenprogramm parsen und ausfuehren und returnValue der Methode zurueckliefern """
-	""" Die Patterns und Matches in der patterns Map muessen beachtet werden! """
-	return 0
+def construct_primitive(tokens):
+	primitive=[]
+	
+	for token in tokens :
+		if(token == '}' or token == ';' or token == '<or>') :
+			break
+			
+		primitive.append(token)
+		
+	return primitive
+
+def concat_path(tmp_command, pos):
+	if len(tmp_command) > pos and pos-1 >= 0 :
+		if tmp_command[pos-1].endswith('/') :
+			tmp_command[pos-1] = tmp_command[pos-1] + tmp_command[pos]
+			del(tmp_command[pos])
+		
+def concat_ext(tmp_command, pos):
+	if len(tmp_command) > pos+1 and pos >= 0 :
+		if tmp_command[pos+1].startswith('.') :
+			tmp_command[pos] = tmp_command[pos] + tmp_command[pos+1]
+			del(tmp_command[pos+1])
+	
+
+def generate_single_commands(original_command, patterns):
+	pattern = False
+	commands = [list(original_command)]
+	tmp_commands = []
+	entry = []
+	run = True
+	
+	while run :
+		has_matched = False
+		for command in commands :
+			pos = 0
+			tmp_command = list(command)
+			tmp_commands.append(tmp_command)
+			
+			for token in command :
+				
+				if token == '>>':
+					for entry in tmp_commands :
+						del(entry[pos])
+						concat_ext(entry, pos-1)
+						concat_path(entry, pos-1)
+					
+					pos = pos-3
+					
+					pattern = False
+				
+				if pattern == True :
+					matches = patterns[token]
+					
+					new_tmp_commands = []
+					
+					for entry in tmp_commands :
+						for match in matches :
+							new_entry = list(entry)
+							new_entry[pos] = match
+						
+							new_tmp_commands.append(new_entry)
+							
+					tmp_commands = new_tmp_commands
+						
+					
+					has_matched = True
+				
+				if token == '<<':
+					for entry in tmp_commands :
+						del(entry[pos])
+					
+					pos=pos-1
+					pattern = True
+				
+				pos=pos+1
+		
+		if has_matched == False :
+			run = False
+		else :	
+			commands = list(tmp_commands)
+			tmp_commands = list()
+	
+	return commands
+
+def do_primitive(tokens, patterns):
+	primitive = construct_primitive(tokens)
+	
+	commands = generate_single_commands(primitive, patterns)
+	returncode = 0
+	
+	for command in commands :
+		returncode = subprocess.call(command)
+		
+		if returncode > 0 :
+			break
+	
+	return returncode
 
 def addPattern(tokens, patterns):
-	""" Tokens bis zum Ende ']' scannen und zu patterns Map hinzufuegen """
-	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
+	for token in tokens :
+		if token == ']':
+			break
+	
+	
 	return ''
 
 def getMinTokenPos(string):
-	tokens = ['<<', '[', '{', '<', '>>', '}', ']', '>']
+	tokens = ['<<', '[', '{', ';', '<', '>>', '}', ']', ';', '>']
 	
 	pos = -1
 	
@@ -61,7 +157,7 @@ def parseTokens(string):
 
 def doLoop(tokens, patterns):
 	""" Schleifenlogik """
-	doActions(tokens, patterns, 0)
+	doActions(tokens, patterns)
 	""" Schleifenlogik """
 	
 def doSequence(tokens, patterns, lastReturn):
@@ -78,7 +174,6 @@ def doAlternative(tokens, patterns, lastReturn):
 
 def doActions(tokens, patterns):
 	""" TODOS:
-	 * umaendern in begins_with, da nicht unbedingt Whitespace zwischen tokens. getStringTokens notwendig?
 	 * return statement ist in diesem Konstrukt nicht moeglich. muss anders geloest werden
 	 * Moeglicher Konflikt <or> mit Patterns? Sollte bei korrekter Implementierung
 	   von doPrimitive eigentlich nicht auftreten, da Patterns ansonsten nur in Befehlen vorkommen.
@@ -98,7 +193,7 @@ def doActions(tokens, patterns):
 				doAlternative('',returnVal)
 			doActions('')
 	"""
-	lastReturn = null
+	lastReturn = None
 	
 	for token in tokens:
 		try:
@@ -109,20 +204,35 @@ def doActions(tokens, patterns):
 			  '}': 0}[value]()
 		except KeyError:
 			# default action
-			returnValue = doPrimitive(tokens, patterns)
+			returnValue = do_primitive(tokens, patterns)
 			
 	return
 
 """ if __name__ == "__main__": <- Auto generiert """
 
 "Platzhalter, experimentiell"
-parser = argparse.ArgumentParser(description='Process and executes configuration files.')
+'''parser = argparse.ArgumentParser(description='Process and executes configuration files.')
 parser.add_argument('files', metavar='filename', type=open, nargs='+', help='The filenames of the configuration files')
 args = parser.parse_args()
 
 for file in args.files:
 	text = file.read()
-	parseTokens(text)
+	tokens = parseTokens(text)
+	doActions(tokens,[])'''
+	
+test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+testpattern1 = dict()
+testpattern1['asdf'] = ['asd', 'jklo', 'qwertz']
+testpattern1['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+
+for command in generate_single_commands(test1, testpattern1) :
+	print (command)
+
+'''print(test1)
+concat_path(test1,3)
+print(test1)
+concat_ext(test1,2)
+print(test1)'''
 
 ''' filename = "asdf"
 fileString = readFile(filename)
