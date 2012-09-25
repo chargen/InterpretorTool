@@ -35,6 +35,8 @@
 
 import argparse
 import os
+import glob
+import re
 
 def construct_primitive(tokens):
 	primitive=[]
@@ -139,25 +141,39 @@ def addPattern(tokens, patterns):
 	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
 	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
 	""" and it should concantenate the tokens. """
-	filepattern = ""
-	for token in tokens:
-		have_tag = false
-		if token.equals("<"):
-			have_tag = true
-			continue
-		elif not have_tag:
-			filepattern += token
-			continue
+	
+	#Get rid of the last ']' in patterns
+	tokens = tokens[:-1]
+	
+	if patterns is None:
+		patterns = {}
+	
+	filepattern = "".join(tokens)
+	filepattern_with_glob = re.sub("<[a-z]+>", "*", filepattern)
+	split_tokens = filepattern_with_glob.split("*")
+	print split_tokens
 
-		# When we reach here, we are in a token
-		patterns[token] = None #for now we add a token with empty value
-		filepattern += "*"
+	#Files will contain a posibly empty list of filenames
+	files = glob.glob(filepattern_with_glob)
+	
+	tokennames = re.findall("<([a-z]+)>", filepattern)
 
-	#when we are finished, we have a full (relative) pass with shell globs
-	#next we need to go into the pathes until we reach a glob (*) and then
-	#recursively go into subfolders and identify file that could match the
-	#glob. And we need to build a list of matching globs.
-	files = os.listdir("something")
+	for tokenname in tokennames:
+		patterns[tokenname] = []
+	
+	for file in files:
+		variablenames = {}
+		result = file
+		for token in split_tokens:
+			result = result.replace(token, '\t')
+		result_list = result.split('\t')
+		pattern_list = []
+		for result_item in result_list:
+			if not result_item == '':
+				pattern_list.append(result_item)
+
+		for result_item, key in zip(pattern_list, tokennames):
+				patterns[key].append(result_item)
 
 	return ''
 
