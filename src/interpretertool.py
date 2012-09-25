@@ -1,6 +1,38 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""
+    GRAMAR DEFINITIONS:
+
+    ACTION ::= COMMAND
+               ALTERNATIVE
+               SEQUENCE
+               SETACTION
+               LOOP
+
+    COMMAND ::= Unix Command
+                Unix Command with PATTERN
+
+    ALTERNATIVE ::= ACTION <or> ALTERNATIVE
+                    ACTION <or> ACTION
+
+    SEQUENCE ::= ACTION; SEQUENCE
+                 ACTION; ACTION
+
+    SETACTION ::= {[ACTION] ACTION}
+
+    LOOP ::= {ACTION}
+
+    PATTERN ::= <<variable>>TEXT
+                TEXT<<variable>>
+                TEXT<<variable>>PATTERN
+                PATTERN<<variable>>TEXT
+
+    TEXT ::= ASCII TEXT
+
+"""
+
+
 import argparse
 import os
 
