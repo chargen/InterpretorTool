@@ -2,33 +2,33 @@
 # -*- coding: utf-8 -*-
 
 """
-    GRAMAR DEFINITIONS:
+	GRAMAR DEFINITIONS:
 
-    ACTION ::= COMMAND
-               ALTERNATIVE
-               SEQUENCE
-               SETACTION
-               LOOP
+	ACTION ::= COMMAND
+			   ALTERNATIVE
+			   SEQUENCE
+			   SETACTION
+			   LOOP
 
-    COMMAND ::= Unix Command
-                Unix Command with PATTERN
+	COMMAND ::= Unix Command
+				Unix Command with PATTERN
 
-    ALTERNATIVE ::= ACTION <or> ALTERNATIVE
-                    ACTION <or> ACTION
+	ALTERNATIVE ::= ACTION <or> ALTERNATIVE
+					ACTION <or> ACTION
 
-    SEQUENCE ::= ACTION; SEQUENCE
-                 ACTION; ACTION
+	SEQUENCE ::= ACTION; SEQUENCE
+				 ACTION; ACTION
 
-    SETACTION ::= {[ACTION] ACTION}
+	SETACTION ::= {[ACTION] ACTION}
 
-    LOOP ::= {ACTION}
+	LOOP ::= {ACTION}
 
-    PATTERN ::= <<variable>>TEXT
-                TEXT<<variable>>
-                TEXT<<variable>>PATTERN
-                PATTERN<<variable>>TEXT
+	PATTERN ::= <<variable>>TEXT
+				TEXT<<variable>>
+				TEXT<<variable>>PATTERN
+				PATTERN<<variable>>TEXT
 
-    TEXT ::= ASCII TEXT
+	TEXT ::= ASCII TEXT
 
 """
 
