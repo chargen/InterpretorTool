@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os
 
 def construct_primitive(tokens):
 	primitive=[]
@@ -102,11 +103,30 @@ def do_primitive(tokens, patterns):
 	return returncode
 
 def addPattern(tokens, patterns):
-	for token in tokens :
-		if token == ']':
-			break
-	
-	
+	""" Tokens bis zum Ende ']' scannen und zu patterns Map hinzufuegen """
+	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
+	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
+	""" and it should concantenate the tokens. """
+	filepattern = ""
+	for token in tokens:
+		have_tag = false
+		if token.equals("<"):
+			have_tag = true
+			continue
+		elif not have_tag:
+			filepattern += token
+			continue
+
+		# When we reach here, we are in a token
+		patterns[token] = None #for now we add a token with empty value
+		filepattern += "*"
+
+	#when we are finished, we have a full (relative) pass with shell globs
+	#next we need to go into the pathes until we reach a glob (*) and then
+	#recursively go into subfolders and identify file that could match the
+	#glob. And we need to build a list of matching globs.
+	files = os.listdir("something")
+
 	return ''
 
 def getMinTokenPos(string):
@@ -163,13 +183,13 @@ def doLoop(tokens, patterns):
 def doSequence(tokens, patterns, lastReturn):
 	""" Sequenz abarbeiten. For und Switch Statement aehnlich wie in doActions! """
 	""" Falls lastReturn nicht gesetzt -> Semantischer Fehler in der
-	    Konfigurationsdatei, da vor einer Sequenz ein Befehl stehen muss """
+		Konfigurationsdatei, da vor einer Sequenz ein Befehl stehen muss """
 	return
 
 def doAlternative(tokens, patterns, lastReturn):
 	""" Alternativen abarbeiten. For und Switch Statement aehnlich wie in doActions! """
 	""" Falls lastReturn nicht gesetzt -> Semantischer Fehler in der
-	    Konfigurationsdatei, da vor einer Alternative ein Befehl stehen muss """
+		Konfigurationsdatei, da vor einer Alternative ein Befehl stehen muss """
 	return
 
 def doActions(tokens, patterns):
