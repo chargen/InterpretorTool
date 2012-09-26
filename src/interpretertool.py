@@ -312,7 +312,7 @@ def do_actions(tokens, patterns):
 				doAlternative('',returnVal)
 			doActions('')
 	"""
-	lastReturnValue = None
+	last_return_value = None
 	executeNext = True
 	
 	current_tokens = list(tokens)
@@ -324,17 +324,17 @@ def do_actions(tokens, patterns):
 		
 		if token == '{' :
 			loop = parse_loop(current_tokens)
-			doLoop(loop, patterns)
+			do_loop(loop, patterns)
 		elif token == '[' :
 			pattern = parse_pattern(current_tokens)
-			addPattern(pattern, patterns)
+			add_pattern(pattern, patterns)
 		elif token == ';' :
-			if lastReturnValue == 0 :
+			if last_return_value == 0 :
 				executeNext = True
 			else :
 				executeNext = False
 		elif token == '<or>' :
-			if lastReturnValue != 0 :
+			if last_return_value != 0 :
 				executeNext = True
 			else :
 				executeNext = False
@@ -343,7 +343,7 @@ def do_actions(tokens, patterns):
 		else :
 			# default action
 			if executeNext == True :
-				lastReturnValue = do_primitive(current_tokens, patterns)
+				last_return_value = do_primitive(current_tokens, patterns)
 				
 		del(current_tokens[0])
 			
