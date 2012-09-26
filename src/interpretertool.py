@@ -38,6 +38,10 @@ import os
 import glob
 import re
 
+class Commands :
+	SEQUENCE = 1
+	ALTERNATIVE = 2
+
 def construct_primitive(tokens):
 	primitive=[]
 	
@@ -136,7 +140,7 @@ def do_primitive(tokens, patterns):
 	
 	return returncode
 
-def addPattern(tokens, patterns):
+def add_pattern(tokens, patterns):
 	""" Tokens bis zum Ende ']' scannen und zu patterns Map hinzufuegen """
 	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
 	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
@@ -151,7 +155,7 @@ def addPattern(tokens, patterns):
 	filepattern = "".join(tokens)
 	filepattern_with_glob = re.sub("<[a-z]+>", "*", filepattern)
 	split_tokens = filepattern_with_glob.split("*")
-	print split_tokens
+	print(split_tokens)
 
 	#Files will contain a posibly empty list of filenames
 	files = glob.glob(filepattern_with_glob)
@@ -177,7 +181,7 @@ def addPattern(tokens, patterns):
 
 	return ''
 
-def getMinTokenPos(string):
+def get_min_token_pos(string):
 	tokens = ['<<', '[', '{', ';', '<', '>>', '}', ']', ';', '>']
 	
 	pos = -1
@@ -190,10 +194,10 @@ def getMinTokenPos(string):
 	
 	return pos
 
-def parseTokens(string):
+def parse_tokens(string):
 	""" Split string (whitespaces) """
 	
-	pos = getMinTokenPos(string)
+	pos = get_min_token_pos(string)
 	tokens = []
 	
 	while pos > -1 :
@@ -215,7 +219,7 @@ def parseTokens(string):
 				
 			string = string[pos:]
 		
-		pos = getMinTokenPos(string)
+		pos = get_min_token_pos(string)
 		
 	
 	for token in tokens :
@@ -223,24 +227,71 @@ def parseTokens(string):
 	
 	return tokens
 
-def doLoop(tokens, patterns):
+def parse_until_end_of(tokens, sign):
+	token_list = list()
+	
+	for token in tokens :
+		if token == sign :
+			break;
+			
+		token_list.append(token)
+	
+	return token_list
+
+def parse_after(tokens, sign):
+	token_list = list()
+	sign_met = False
+	
+	for token in tokens :
+		if sign_met :
+			token_list.append(token)
+		
+		if token == sign :
+			sign_met = True
+	
+	return token_list
+
+''' def parse_until_last_occurence(tokens, token):
+	return
+
+def parse_until_eof_seq(tokens):
+	parse_until_last_occurence(tokens,';')
+	return
+
+def parse_until_eof_alt(tokens):
+	return
+	'''
+
+def parse_after_pattern(tokens):
+	return parse_after(tokens,']')
+
+def parse_pattern(tokens):
+	return parse_until_end_of(tokens,']')
+
+def parse_after_loop(tokens):
+	return parse_after(tokens,'}')
+
+def parse_loop(tokens):
+	return parse_until_end_of(tokens,'}')
+
+def do_loop(tokens, patterns):
 	""" Schleifenlogik """
-	doActions(tokens, patterns)
+	do_actions(tokens, patterns)
 	""" Schleifenlogik """
 	
-def doSequence(tokens, patterns, lastReturn):
+	""" def doSequence(tokens, patterns, lastReturn): """
 	""" Sequenz abarbeiten. For und Switch Statement aehnlich wie in doActions! """
 	""" Falls lastReturn nicht gesetzt -> Semantischer Fehler in der
 		Konfigurationsdatei, da vor einer Sequenz ein Befehl stehen muss """
-	return
+	"""	return
 
-def doAlternative(tokens, patterns, lastReturn):
+def doAlternative(tokens, patterns, lastReturn):"""
 	""" Alternativen abarbeiten. For und Switch Statement aehnlich wie in doActions! """
 	""" Falls lastReturn nicht gesetzt -> Semantischer Fehler in der
 		Konfigurationsdatei, da vor einer Alternative ein Befehl stehen muss """
-	return
+	"""	return"""
 
-def doActions(tokens, patterns):
+def do_actions(tokens, patterns):
 	""" TODOS:
 	 * return statement ist in diesem Konstrukt nicht moeglich. muss anders geloest werden
 	 * Moeglicher Konflikt <or> mit Patterns? Sollte bei korrekter Implementierung
@@ -261,18 +312,40 @@ def doActions(tokens, patterns):
 				doAlternative('',returnVal)
 			doActions('')
 	"""
-	lastReturn = None
+	lastReturnValue = None
+	executeNext = True
+	
+	current_tokens = list(tokens)
 	
 	for token in tokens:
-		try:
-			{ '{': doLoop(tokens, patterns),
-			  '[': addPattern(tokens, patterns),
-			  ';': doSequence(tokens, patterns, lastReturn),
-			  '<or>' : doAlternative(tokens, patterns, lastReturn),
-			  '}': 0}[value]()
-		except KeyError:
+		if executeNext == False :
+			executeNext = True
+			continue
+		
+		if token == '{' :
+			loop = parse_loop(current_tokens)
+			doLoop(loop, patterns)
+		elif token == '[' :
+			pattern = parse_pattern(current_tokens)
+			addPattern(pattern, patterns)
+		elif token == ';' :
+			if lastReturnValue == 0 :
+				executeNext = True
+			else :
+				executeNext = False
+		elif token == '<or>' :
+			if lastReturnValue != 0 :
+				executeNext = True
+			else :
+				executeNext = False
+		elif token == '}' :
+			break
+		else :
 			# default action
-			returnValue = do_primitive(tokens, patterns)
+			if executeNext == True :
+				lastReturnValue = do_primitive(current_tokens, patterns)
+				
+		del(current_tokens[0])
 			
 	return
 
@@ -288,13 +361,19 @@ for file in args.files:
 	tokens = parseTokens(text)
 	doActions(tokens,[])'''
 	
-test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+'''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 testpattern1 = dict()
 testpattern1['asdf'] = ['asd', 'jklo', 'qwertz']
 testpattern1['asdfg'] = ['yxcv', 'vbnm', 'fghj']
 
 for command in generate_single_commands(test1, testpattern1) :
-	print (command)
+	print (command)'''
+	
+test2 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', ']', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+test3 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', '}', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+
+print(parse_after_pattern(test2))
+print(parse_after_pattern(test3))
 
 '''print(test1)
 concat_path(test1,3)
