@@ -128,6 +128,8 @@ def generate_single_commands(original_command, patterns):
 
 def do_primitive(tokens, patterns):
 	primitive = construct_primitive(tokens)
+	''' This needs to be set if a pattern could derive any files '''
+	pattern_matches = False
 	
 	commands = generate_single_commands(primitive, patterns)
 	returncode = 0
@@ -138,7 +140,7 @@ def do_primitive(tokens, patterns):
 		if returncode > 0 :
 			break
 	
-	return returncode
+	return returncode, pattern_matches
 
 def add_pattern(tokens, patterns):
 	""" Tokens bis zum Ende ']' scannen und zu patterns Map hinzufuegen """
@@ -275,9 +277,15 @@ def parse_loop(tokens):
 	return parse_until_end_of(tokens,'}')
 
 def do_loop(tokens, patterns):
-	""" Schleifenlogik """
-	do_actions(tokens, patterns)
-	""" Schleifenlogik """
+	run = True
+	
+	while run :
+		pattern_matches = do_actions(tokens, patterns)
+		
+		if pattern_matches == False :
+			run = False
+	
+	return pattern_matches
 	
 	""" def doSequence(tokens, patterns, lastReturn): """
 	""" Sequenz abarbeiten. For und Switch Statement aehnlich wie in doActions! """
@@ -313,6 +321,7 @@ def do_actions(tokens, patterns):
 			doActions('')
 	"""
 	last_return_value = None
+	pattern_matches = False
 	executeNext = True
 	
 	current_tokens = list(tokens)
@@ -324,7 +333,10 @@ def do_actions(tokens, patterns):
 		
 		if token == '{' :
 			loop = parse_loop(current_tokens)
-			do_loop(loop, patterns)
+			pattern_matches = do_loop(loop, patterns)
+			
+			if return_tuple[1] == True :
+				pattern_matches = True
 		elif token == '[' :
 			pattern = parse_pattern(current_tokens)
 			add_pattern(pattern, patterns)
@@ -343,11 +355,15 @@ def do_actions(tokens, patterns):
 		else :
 			# default action
 			if executeNext == True :
-				last_return_value = do_primitive(current_tokens, patterns)
+				return_tuple = do_primitive(current_tokens, patterns)
+				last_return_value = return_tuple[0]
+				
+				if return_tuple[1] == True :
+					pattern_matches = True
 				
 		del(current_tokens[0])
 			
-	return
+	return pattern_matches
 
 """ if __name__ == "__main__": <- Auto generiert """
 
