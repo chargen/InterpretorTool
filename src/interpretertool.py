@@ -66,6 +66,105 @@ def concat_ext(tmp_command, pos):
 			del(tmp_command[pos+1])
 	
 
+def split_command(original_command):
+	result = []
+	without_spaces = []
+	
+	escape_spaces = False
+	
+	for part in original_command :
+		if escape_spaces == False and part.startswith('"') :
+			without_spaces = []
+			escape_spaces = True
+			
+		if escape_spaces == False :
+			result.append(part)
+			
+		elif escape_spaces == True :
+			without_spaces.append(part)
+			
+		if escape_spaces == True and part.endswith('"') :
+			result.append(" ".join(without_spaces))
+			escape_spaces = False
+			
+	return result
+
+def generate_pathname(pathname_with_pattern, patterns):
+	tmp_list = ""
+	tokennames = re.findall("<<([a-z]+)>>", pathname_with_pattern)
+	paths = []
+
+	for tokenname in tokennames:
+		tmp_list+=tokenname
+		tmp_list+=" "
+
+	if len(tmp_list) > 0 :
+		tmp_list = tmp_list[:-1]
+
+		matches_list = patterns[tmp_list]
+
+		for match in matches_list :
+			path = pathname_with_pattern
+			pos = 0
+
+			for tokenname in tokennames:					
+				if len(tokennames) > 1 :
+					path = path.replace('<<' + tokenname + '>>', match[pos])
+				else :
+					path = path.replace('<<' + tokenname + '>>', match)
+
+				pos+=1
+				
+			paths.append(path)
+
+	# Insert Patterns
+	return paths
+
+def cross_product(*args):
+    ans = [[]]
+    for arg in args:
+        ans = [x+[y] for x in ans for y in arg]
+    return ans
+	
+def generate_pathnames(command_list, patterns):
+	print('generate_pathnames: ')
+	pattern_list = []
+	pathnames = []
+	tmp_list = ""
+	resolved_pathnames = list()
+	
+	# Get patterns from pathnames
+	for parameter_with_pattern in command_list :
+		paths = generate_pathname(parameter_with_pattern, patterns)
+		print(paths)
+		
+		if len(paths) > 0 :
+			resolved_pathnames.append(paths)
+		else :
+			resolved_pathnames.append([parameter_with_pattern])
+	
+	print(resolved_pathnames)
+	print('cross_product')
+	
+	print(cross_product(*resolved_pathnames))
+	
+	'''for file in files:
+		variablenames = {}
+		result = file
+		for token in split_tokens:
+			result = result.replace(token, '\t')
+		result_list = result.split('\t')
+		pattern_list = []
+		for result_item in result_list:
+			if not result_item == '':
+				pattern_list.append(result_item)
+
+		for result_item, key in zip(pattern_list, tokennames):
+				patterns[key].append(result_item)'''
+
+	return ''
+	
+
 def generate_single_commands(original_command, patterns):
 	pattern = False
 	commands = [list(original_command)]
@@ -145,7 +244,7 @@ def do_primitive(tokens, patterns):
 	return returncode, pattern_matches
 
 def add_pattern(tokens, patterns):
-	""" Tokens bis zum Ende ']' scannen und zu patterns Map hinzufuegen """
+	""" Tokens bis zum Ende scannen und zu patterns Map hinzufuegen """
 	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
 	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
 	""" and it should concantenate the tokens. """
@@ -183,7 +282,8 @@ def add_pattern(tokens, patterns):
 	return ''
 
 def get_min_token_pos(string):
-	tokens = ['<<', '[', '{', ';', '|', '<', '>>', '}', ']', '>']
+	'''tokens = [' ', '\t', '\n', '<<', '[', '{', ';', '|', '<', '>>', '}', ']', '>']'''
+	tokens = [' ', '\t', '\n', '[', '{', ';', '|', '}', ']']
 	
 	pos = -1
 	
@@ -378,9 +478,19 @@ args = parser.parse_args()
 for file in args.files:
 	text = file.read()
 	tokens = parse_tokens(text)
-	print(text)
-	print(tokens)
-	do_actions(tokens,[])
+	print('text: ' + text)
+	print('tokens: ' + str(tokens))
+	split_command = split_command(tokens)
+	print('split_command: ' + str(split_command))
+	patterns = dict()
+	patterns['asdf'] = ['asd', 'jklo', 'qwertz']
+	patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+	patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
+	patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
+	generate_pathnames = generate_pathnames(construct_primitive(split_command),patterns)
+	print('generate_pathnames: ' + str(generate_pathnames))
+	
+	'''do_actions(tokens,[])'''
 	
 '''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 testpattern1 = dict()
