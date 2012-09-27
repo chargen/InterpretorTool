@@ -34,7 +34,7 @@
 
 
 import argparse
-import os
+import subprocess
 import glob
 import re
 
@@ -46,7 +46,7 @@ def construct_primitive(tokens):
 	primitive=[]
 	
 	for token in tokens :
-		if(token == '}' or token == ';' or token == '<or>') :
+		if(token == '}' or token == ';' or token == '|') :
 			break
 			
 		primitive.append(token)
@@ -127,6 +127,7 @@ def generate_single_commands(original_command, patterns):
 	return commands
 
 def do_primitive(tokens, patterns):
+	print('do_primitive')
 	primitive = construct_primitive(tokens)
 	''' This needs to be set if a pattern could derive any files '''
 	pattern_matches = False
@@ -135,6 +136,7 @@ def do_primitive(tokens, patterns):
 	returncode = 0
 	
 	for command in commands :
+		print(command)
 		returncode = subprocess.call(command)
 		
 		if returncode > 0 :
@@ -147,9 +149,6 @@ def add_pattern(tokens, patterns):
 	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
 	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
 	""" and it should concantenate the tokens. """
-	
-	#Get rid of the last ']' in patterns
-	tokens = tokens[:-1]
 	
 	if patterns is None:
 		patterns = {}
@@ -184,7 +183,7 @@ def add_pattern(tokens, patterns):
 	return ''
 
 def get_min_token_pos(string):
-	tokens = ['<<', '[', '{', ';', '<', '>>', '}', ']', ';', '>']
+	tokens = ['<<', '[', '{', ';', '|', '<', '>>', '}', ']', '>']
 	
 	pos = -1
 	
@@ -197,8 +196,6 @@ def get_min_token_pos(string):
 	return pos
 
 def parse_tokens(string):
-	""" Split string (whitespaces) """
-	
 	pos = get_min_token_pos(string)
 	tokens = []
 	
@@ -217,12 +214,17 @@ def parse_tokens(string):
 			token = string[:pos]
 
 			if(len(token.strip()) != 0) :
-				tokens.append(token)
+				tokens.append(token.strip())
 				
 			string = string[pos:]
 		
 		pos = get_min_token_pos(string)
 		
+	''' End '''
+	token = string[:]
+	
+	if(len(token.strip()) != 0) :
+				tokens.append(token.strip())
 	
 	for token in tokens :
 		print("\""+ token + "\"")
@@ -345,7 +347,7 @@ def do_actions(tokens, patterns):
 				executeNext = True
 			else :
 				executeNext = False
-		elif token == '<or>' :
+		elif token == '|' :
 			if last_return_value != 0 :
 				executeNext = True
 			else :
@@ -355,6 +357,7 @@ def do_actions(tokens, patterns):
 		else :
 			# default action
 			if executeNext == True :
+				print('asdf')
 				return_tuple = do_primitive(current_tokens, patterns)
 				last_return_value = return_tuple[0]
 				
@@ -368,14 +371,16 @@ def do_actions(tokens, patterns):
 """ if __name__ == "__main__": <- Auto generiert """
 
 "Platzhalter, experimentiell"
-'''parser = argparse.ArgumentParser(description='Process and executes configuration files.')
+parser = argparse.ArgumentParser(description='Process and executes configuration files.')
 parser.add_argument('files', metavar='filename', type=open, nargs='+', help='The filenames of the configuration files')
 args = parser.parse_args()
 
 for file in args.files:
 	text = file.read()
-	tokens = parseTokens(text)
-	doActions(tokens,[])'''
+	tokens = parse_tokens(text)
+	print(text)
+	print(tokens)
+	do_actions(tokens,[])
 	
 '''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 testpattern1 = dict()
@@ -385,11 +390,11 @@ testpattern1['asdfg'] = ['yxcv', 'vbnm', 'fghj']
 for command in generate_single_commands(test1, testpattern1) :
 	print (command)'''
 	
-test2 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', ']', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+'''test2 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', ']', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 test3 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', '}', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 
 print(parse_after_pattern(test2))
-print(parse_after_pattern(test3))
+print(parse_after_pattern(test3))'''
 
 '''print(test1)
 concat_path(test1,3)
