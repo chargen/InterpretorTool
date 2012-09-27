@@ -251,33 +251,40 @@ def add_pattern(tokens, patterns):
 	
 	if patterns is None:
 		patterns = {}
-	
-	filepattern = "".join(tokens)
-	filepattern_with_glob = re.sub("<[a-z]+>", "*", filepattern)
-	split_tokens = filepattern_with_glob.split("*")
-	print(split_tokens)
 
-	#Files will contain a posibly empty list of filenames
-	files = glob.glob(filepattern_with_glob)
-	
-	tokennames = re.findall("<([a-z]+)>", filepattern)
+	filepatterns = []
+	for token in tokens:
+		if not token == ";":
+			filepatterns.append(token)
 
-	for tokenname in tokennames:
-		patterns[tokenname] = []
-	
-	for file in files:
-		variablenames = {}
-		result = file
-		for token in split_tokens:
-			result = result.replace(token, '\t')
-		result_list = result.split('\t')
-		pattern_list = []
-		for result_item in result_list:
-			if not result_item == '':
-				pattern_list.append(result_item)
+	for filepattern in filepatterns:
+		filepattern_with_glob = re.sub("<[a-zA-Z0-9_]+>", "*", filepattern)
+		#print filepattern_with_glob
+		split_tokens = filepattern_with_glob.split("*")
+		#print split_tokens
 
-		for result_item, key in zip(pattern_list, tokennames):
-				patterns[key].append(result_item)
+		#Files will contain a posibly empty list of filenames
+		files = glob.glob(filepattern_with_glob)
+
+		tokennames = re.findall("<([a-zA-Z0-9_]+)>", filepattern)
+		composite_tokenname = " ".join(tokennames)
+
+		patterns[composite_tokenname] = []
+
+		for file in files:
+			variablenames = {}
+			result = file
+			for token in split_tokens:
+				result = result.replace(token, '\t')
+			#result list contains the string for the <...> patterns
+			result_list = result.split('\t')
+			pattern_list = []
+			for result_item in result_list:
+				if not result_item == '':
+					pattern_list.append(result_item)
+
+			print pattern_list
+			patterns[composite_tokenname].append(pattern_list)
 
 	return ''
 
