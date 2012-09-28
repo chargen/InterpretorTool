@@ -31,7 +31,7 @@
 	TEXT ::= ASCII TEXT
 	
 	Note that output stream redirections are required to be escaped:
-	To redirect Input use: \\<
+	To redirect Append use: \\>>
 	To redirect Output use: \\>
 
 """
@@ -638,58 +638,61 @@ def do_actions(tokens, patterns):
 			
 	return last_return_value, pattern_matches
 
-""" if __name__ == "__main__": <- Auto generiert """
 
-#"Platzhalter, experimentiell"
-parser = argparse.ArgumentParser(description='Process and executes configuration files.')
-parser.add_argument('files', metavar='filename', type=open, nargs='+', help='The filenames of the configuration files')
-args = parser.parse_args()
+#The following code is only run, if this program is started
+#interactively and not loaded as a module
+if __name__ == "__main__":
 
-for file in args.files:
-	text = file.read()
-	tokens = parse_tokens(text)
-	#print('text: ' + text)
-	#print('tokens: ' + str(tokens))
-	#split_command = split_command(tokens)
-	#print('split_command: ' + str(split_command))
-	#patterns = dict()
-	#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
-	#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
-	#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
-	#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
-	#do_primitive(tokens,patterns)
-	#print('generate_pathnames: ' + str(generate_pathnames))
-	
-	patterns = dict()
-	#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
-	#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
-	#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
-	#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
-	
-	do_actions(tokens,patterns)
-	
-'''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
-testpattern1 = dict()
-testpattern1['asdf'] = ['asd', 'jklo', 'qwertz']
-testpattern1['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+	#"Platzhalter, experimentiell"
+	parser = argparse.ArgumentParser(description='Process and executes configuration files.')
+	parser.add_argument('files', metavar='filename', type=open, nargs='+', help='The filenames of the configuration files')
+	args = parser.parse_args()
 
-for command in generate_single_commands(test1, testpattern1) :
-	print (command)'''
-	
-'''test2 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', ']', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
-test3 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', '}', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+	for file in args.files:
+		text = file.read()
+		tokens = parse_tokens(text)
+		#print('text: ' + text)
+		#print('tokens: ' + str(tokens))
+		#split_command = split_command(tokens)
+		#print('split_command: ' + str(split_command))
+		#patterns = dict()
+		#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
+		#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+		#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
+		#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
+		#do_primitive(tokens,patterns)
+		#print('generate_pathnames: ' + str(generate_pathnames))
+		
+		patterns = dict()
+		#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
+		#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+		#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
+		#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
+		
+		do_actions(tokens,patterns)
+		
+	'''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+	testpattern1 = dict()
+	testpattern1['asdf'] = ['asd', 'jklo', 'qwertz']
+	testpattern1['asdfg'] = ['yxcv', 'vbnm', 'fghj']
 
-print(parse_after_pattern(test2))
-print(parse_after_pattern(test3))'''
+	for command in generate_single_commands(test1, testpattern1) :
+		print (command)'''
+		
+	'''test2 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', ']', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
+	test3 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf', '}', 'ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 
-'''print(test1)
-concat_path(test1,3)
-print(test1)
-concat_ext(test1,2)
-print(test1)'''
+	print(parse_after_pattern(test2))
+	print(parse_after_pattern(test3))'''
 
-''' filename = "asdf"
-fileString = readFile(filename)
-tokens = getTokensFromString(fileString)
-doActions(tokens, [], 0)
-'''
+	'''print(test1)
+	concat_path(test1,3)
+	print(test1)
+	concat_ext(test1,2)
+	print(test1)'''
+
+	''' filename = "asdf"
+	fileString = readFile(filename)
+	tokens = getTokensFromString(fileString)
+	doActions(tokens, [], 0)
+	'''
