@@ -41,17 +41,24 @@ import re
 class Commands :
 	SEQUENCE = 1
 	ALTERNATIVE = 2
+	
+pipe_token = '\\\\|'
+append_token = '\\\\>>'
+write_token = '\\\\>'
 
-def construct_primitive(tokens):
+def debug(msg):
+	print('DEBUG: ' + msg)
+
+def get_next_partial_command(tokens):
 	primitive=[]
 	
 	for token in tokens :
-		if(token == '}' or token == ';' or token == '|') :
+		if(token == '}' or token == ';' or token == '||') :
 			break
 			
 		primitive.append(token)
 		
-	return primitive
+	return primitive	
 
 def concat_path(tmp_command, pos):
 	if len(tmp_command) > pos and pos-1 >= 0 :
@@ -101,21 +108,21 @@ def generate_pathname(pathname_with_pattern, patterns):
 	if len(tmp_list) > 0 :
 		tmp_list = tmp_list[:-1]
 
-		matches_list = patterns[tmp_list]
+		try :
+			matches_list = patterns[tmp_list]
 
-		for match in matches_list :
-			path = pathname_with_pattern
-			pos = 0
+			for match in matches_list :
+				path = pathname_with_pattern
+				pos = 0
 
-			for tokenname in tokennames:					
-				if len(tokennames) > 1 :
+				for tokenname in tokennames:					
 					path = path.replace('<<' + tokenname + '>>', match[pos])
-				else :
-					path = path.replace('<<' + tokenname + '>>', match)
 
-				pos+=1
-				
-			paths.append(path)
+					pos+=1
+
+				paths.append(path)
+		except KeyError :
+			pass
 
 	# Insert Patterns
 	return paths
@@ -136,17 +143,17 @@ def generate_pathnames(command_list, patterns):
 	# Get patterns from pathnames
 	for parameter_with_pattern in command_list :
 		paths = generate_pathname(parameter_with_pattern, patterns)
-		print(paths)
+		
+		tokennames = re.findall("<<([a-z]+)>>", parameter_with_pattern)
 		
 		if len(paths) > 0 :
 			resolved_pathnames.append(paths)
 		else :
-			resolved_pathnames.append([parameter_with_pattern])
-	
-	print(resolved_pathnames)
-	print('cross_product')
-	
-	print(cross_product(*resolved_pathnames))
+			if len(tokennames) > 0 :
+				debug('Could not find any matches for patterns. Stopping command execution.')
+				return []
+			else :
+				resolved_pathnames.append([parameter_with_pattern])
 	
 	'''for file in files:
 		variablenames = {}
@@ -162,85 +169,132 @@ def generate_pathnames(command_list, patterns):
 		for result_item, key in zip(pattern_list, tokennames):
 				patterns[key].append(result_item)'''
 
-	return ''
+	print("resolved: " + str(resolved_pathnames))
+
+	return cross_product(*resolved_pathnames)
 	
 
-def generate_single_commands(original_command, patterns):
-	pattern = False
-	commands = [list(original_command)]
-	tmp_commands = []
-	entry = []
-	run = True
+def generate_command_list(commands):
+	command_list = []
+	current_command = []
+	file_token = False
 	
-	while run :
-		has_matched = False
-		for command in commands :
-			pos = 0
-			tmp_command = list(command)
-			tmp_commands.append(tmp_command)
+	for command in commands :
+		for parameter in command :
+			if file_token == True :
+				command_list.append(parameter)
+				file_token = False
+				continue
 			
-			for token in command :
+			if parameter == pipe_token or parameter == write_token or parameter == append_token :
+				if current_command != [] :
+					command_list.append(current_command)
+				command_list.append(parameter)
+				current_command = []
 				
-				if token == '>>':
-					for entry in tmp_commands :
-						del(entry[pos])
-						concat_ext(entry, pos-1)
-						concat_path(entry, pos-1)
-					
-					pos = pos-3
-					
-					pattern = False
-				
-				if pattern == True :
-					matches = patterns[token]
-					
-					new_tmp_commands = []
-					
-					for entry in tmp_commands :
-						for match in matches :
-							new_entry = list(entry)
-							new_entry[pos] = match
-						
-							new_tmp_commands.append(new_entry)
-							
-					tmp_commands = new_tmp_commands
-						
-					
-					has_matched = True
-				
-				if token == '<<':
-					for entry in tmp_commands :
-						del(entry[pos])
-					
-					pos=pos-1
-					pattern = True
-				
-				pos=pos+1
-		
-		if has_matched == False :
-			run = False
-		else :	
-			commands = list(tmp_commands)
-			tmp_commands = list()
+				if parameter == write_token or parameter == append_token :
+					file_token = True				
+			else :
+				current_command.append(parameter)
+
+		if current_command != [] :
+			command_list.append(current_command)
+		current_command = []
 	
-	return commands
+	return command_list
 
 def do_primitive(tokens, patterns):
 	print('do_primitive')
-	primitive = construct_primitive(tokens)
-	''' This needs to be set if a pattern could derive any files '''
+	primitive = get_next_partial_command(tokens)
+	
+	split = split_command(tokens)
+	
+	print('split_command: ' + str(split))
+	print('')
+	
+	generated_pathnames = generate_pathnames(get_next_partial_command(split),patterns)
+	
+	print('generated_pathnames: ' + str(generated_pathnames))
+	print('')
+	
+	generated_commands = generate_command_list(generated_pathnames)
+	
+	print('generated_commands: ' + str(generated_commands))
+	print('')
+	
+	''' This needs to be set to return if a pattern could derive any files '''
 	pattern_matches = False
+
+	returncode = None
 	
-	commands = generate_single_commands(primitive, patterns)
-	returncode = 0
+	commands_length = len(generated_commands)
+	pos = 0
+	process_input = None
+	process = None
+	process_output = None
+	file_list = list()
+	chained = False
+	next_chained = False
 	
-	for command in commands :
+	while pos < commands_length :
+	
+		command = generated_commands[pos]
 		print(command)
-		returncode = subprocess.call(command)
+		print(process)
+		print(next_chained)
+
+		if process != None and next_chained == True :
+			print("process")
+			process_input = process.stdout
+			chained = True 
 		
+		if pos+1 < commands_length and generated_commands[pos+1] == pipe_token :
+			process_output = subprocess.PIPE
+			next_chained = True
+			pos += 1
+		elif pos+2 < commands_length and generated_commands[pos+1] == append_token :
+			process_output = open(generated_commands[pos+2], 'a')
+			file_list.append(process_output)
+			next_chained = False
+			pos += 2
+		elif pos+2 < commands_length and generated_commands[pos+1] == write_token :
+			process_output = open(generated_commands[pos+2], 'w')
+			file_list.append(process_output)
+			next_chained = False
+			pos += 2
+		else :
+			process_output = None
+			next_chained = False
+	
+		debug("command: " + str(command))
+		debug("stdin: " + str(process_input))
+		debug("stdout: " + str(process_output))
+		process = subprocess.Popen(command, stdin=process_input, stdout=process_output)
+		print(process)
+	
+		if chained == True :
+			print("asdf")
+			process_input.close()
+			process_input = None
+			process.communicate()
+
+			if next_chained == False :
+				chained = False
+
+		pos += 1
+
+
+		#if process != None :
+		process.wait()
+		returncode = process.returncode
 		if returncode > 0 :
 			break
 	
+	for file in file_list :
+		file.close()
+	
+	debug('do_primitive returning: ' + str((returncode, pattern_matches)))
+
 	return returncode, pattern_matches
 
 def add_pattern(tokens, patterns):
@@ -248,6 +302,8 @@ def add_pattern(tokens, patterns):
 	""" Patterns map muss Patterns + Matches enthalten damit andere Methoden auf Ergebnis zugreifen koennen """
 	""" The following should change file/to/<pattern>.extension into file/to/pattern/*.extension"""
 	""" and it should concantenate the tokens. """
+
+	result = False
 	
 	if patterns is None:
 		patterns = {}
@@ -259,7 +315,6 @@ def add_pattern(tokens, patterns):
 
 	for filepattern in filepatterns:
 		filepattern_with_glob = re.sub("<[a-zA-Z0-9_]+>", "*", filepattern)
-		#print filepattern_with_glob
 		split_tokens = filepattern_with_glob.split("*")
 		#print split_tokens
 
@@ -274,36 +329,49 @@ def add_pattern(tokens, patterns):
 		for file in files:
 			variablenames = {}
 			result = file
+
 			for token in split_tokens:
-				result = result.replace(token, '\t')
+				# check if token is whitespace first!
+				if token != '' :
+					result = result.replace(token, '\t')
 			#result list contains the string for the <...> patterns
+
 			result_list = result.split('\t')
 			pattern_list = []
 			for result_item in result_list:
 				if not result_item == '':
 					pattern_list.append(result_item)
 
-			print pattern_list
+			debug('result_list: ' + str(result_list))
 			patterns[composite_tokenname].append(pattern_list)
 
-	return ''
+			if len(pattern_list) > 0 :
+				result = True
+
+	debug('add_pattern returning: ' + str(result))
+	return result
 
 def get_min_token_pos(string):
 	'''tokens = [' ', '\t', '\n', '<<', '[', '{', ';', '|', '<', '>>', '}', ']', '>']'''
-	tokens = [' ', '\t', '\n', '[', '{', ';', '|', '}', ']']
+	tokens = [' ', '\t', '\n', '||' , '[', '{', ';', pipe_token, append_token, write_token, '}', ']']
 	
 	pos = -1
+	final = ' '
 	
 	for token in tokens :
 		tmppos = string.find(token)
 		
 		if (tmppos < pos or pos == -1) and tmppos > -1:
 			pos = tmppos
+			final = str(token)
 	
-	return pos
+	return pos, len(final)
 
 def parse_tokens(string):
-	pos = get_min_token_pos(string)
+	tuple = get_min_token_pos(string)
+	print(tuple)
+	pos = tuple[0]
+	length = tuple[1]
 	tokens = []
 	
 	while pos > -1 :
@@ -313,10 +381,7 @@ def parse_tokens(string):
 				
 			string = string[pos:]
 				
-			if(string.find('<<') == 0 or string.find('>>') == 0) :
-				pos = 2
-			else :
-				pos = 1
+			pos = length
 				
 			token = string[:pos]
 
@@ -325,7 +390,9 @@ def parse_tokens(string):
 				
 			string = string[pos:]
 		
-		pos = get_min_token_pos(string)
+		tuple = get_min_token_pos(string)
+		pos = tuple[0]
+		length = tuple[1]
 		
 	''' End '''
 	token = string[:]
@@ -338,27 +405,37 @@ def parse_tokens(string):
 	
 	return tokens
 
-def parse_until_end_of(tokens, sign):
+def parse_until_end_of(tokens, sign_open, sign_close):
 	token_list = list()
+	count = 1
 	
-	for token in tokens :
-		if token == sign :
-			break;
+	for token in tokens[1:] :
+		if token == sign_open :
+			count +=1
+			
+		if token == sign_close :
+			count -=1
+			
+		if count == 0 :
+			break
 			
 		token_list.append(token)
 	
 	return token_list
 
-def parse_after(tokens, sign):
+def parse_after(tokens, sign_open, sign_close):
 	token_list = list()
-	sign_met = False
+	count = 1
 	
-	for token in tokens :
-		if sign_met :
+	for token in tokens[1:] :
+		if token == sign_open :
+			count +=1
+
+		if count == 0 :
 			token_list.append(token)
-		
-		if token == sign :
-			sign_met = True
+			
+		if token == sign_close :
+			count -=1
 	
 	return token_list
 
@@ -374,24 +451,57 @@ def parse_until_eof_alt(tokens):
 	'''
 
 def parse_after_pattern(tokens):
-	return parse_after(tokens,']')
+	return parse_after(tokens, '[',']')
 
 def parse_pattern(tokens):
-	return parse_until_end_of(tokens,']')
+	return parse_until_end_of(tokens, '[',']')
 
 def parse_after_loop(tokens):
-	return parse_after(tokens,'}')
+	return parse_after(tokens, '{','}')
 
 def parse_loop(tokens):
-	return parse_until_end_of(tokens,'}')
+	return parse_until_end_of(tokens, '{','}')
+
+def parse_after_command(tokens):
+	rest=[]
+	found_char = False
+	
+	for token in tokens :
+		if(token == '}' or token == ';' or token == '||') :
+			found_char = True
+		
+		if found_char == True :
+			rest.append(token)
+		
+	return rest
+
+def do_pattern(tokens, patterns):
+
+	pattern = parse_pattern(tokens)
+
+	print("pattern: " + str(pattern))
+	
+	pattern_matches = add_pattern(pattern, patterns)
+	
+	body = parse_after_pattern(tokens)
+	
+	result = do_actions(body, patterns)
+
+	if result[1] == True or pattern_matches == True :
+		pattern_matches = True
+
+	return result[0], pattern_matches
 
 def do_loop(tokens, patterns):
 	run = True
 	
 	while run :
+		debug("run loop")
 		pattern_matches = do_actions(tokens, patterns)
 		
-		if pattern_matches == False :
+
+		debug("pattern_matches: " + str(pattern_matches))
+		if pattern_matches[1] == False :
 			run = False
 	
 	return pattern_matches
@@ -435,45 +545,95 @@ def do_actions(tokens, patterns):
 	
 	current_tokens = list(tokens)
 	
-	for token in tokens:
-		if executeNext == False :
-			executeNext = True
-			continue
+	pos = 0
+	length = len(current_tokens)
+	
+	while pos < length :
+		print('do_action')
+		print('pos: ' + str(pos))
+		print('length: ' + str(length))
+		print('tokens: ' + str(current_tokens))
+	
+		token = current_tokens[pos]
 		
 		if token == '{' :
+			debug("Encountered loop: ")
 			loop = parse_loop(current_tokens)
-			pattern_matches = do_loop(loop, patterns)
+			result = do_loop(loop, patterns)
 			
-			if return_tuple[1] == True :
+			if result[1] == True :
 				pattern_matches = True
+
+			last_return_value = result[0]
+				
+			current_tokens = parse_after_loop(current_tokens)
 		elif token == '[' :
+			debug("Encountered pattern: ")
 			pattern = parse_pattern(current_tokens)
-			add_pattern(pattern, patterns)
+			
+			result = do_pattern(pattern, dict(patterns))
+
+			if result[1] == True :
+				pattern_matches = True
+				debug('pattern_Matches')
+			
+			last_return_value = result[0]
+
+			current_tokens = parse_after_pattern(current_tokens)			
 		elif token == ';' :
+			debug("Encountered sequence: ")
 			if last_return_value == 0 :
+				debug("   Executing")
 				executeNext = True
 			else :
+				debug("   Not executing")
 				executeNext = False
-		elif token == '|' :
-			if last_return_value != 0 :
-				executeNext = True
+				
+			current_tokens = current_tokens[1:]
+		elif token == '||' :
+			debug("Encountered alternative: ")
+			if last_return_value == 0 :
+				debug("   Not executing")
+				executeNext = False
 			else :
-				executeNext = False
+				debug("   Executing")
+				executeNext = True
+				
+			current_tokens = current_tokens[1:]
 		elif token == '}' :
 			break
 		else :
 			# default action
+			debug("Encountered command: ")
 			if executeNext == True :
 				print('asdf')
 				return_tuple = do_primitive(current_tokens, patterns)
 				last_return_value = return_tuple[0]
+			elif executeNext == False :
+				executeNext = True
 				
-				if return_tuple[1] == True :
-					pattern_matches = True
-				
-		del(current_tokens[0])
 			
-	return pattern_matches
+			current_tokens = parse_after_command(current_tokens)
+				
+		pos += 1
+		
+		if len(current_tokens) < length :
+			print('asdf')
+			print(length)
+			print(len(current_tokens))
+			print(pos)
+			pos-=(length-len(current_tokens))
+			
+			if pos < 0 :
+				pos = 0
+			
+			length = len(current_tokens)
+			
+			print('current_tokens: ' + str(current_tokens))
+			print('length: ' + str(length))
+			print('pos')
+			
+	return last_return_value, pattern_matches
 
 """ if __name__ == "__main__": <- Auto generiert """
 
@@ -485,19 +645,25 @@ args = parser.parse_args()
 for file in args.files:
 	text = file.read()
 	tokens = parse_tokens(text)
-	print('text: ' + text)
-	print('tokens: ' + str(tokens))
-	split_command = split_command(tokens)
-	print('split_command: ' + str(split_command))
-	patterns = dict()
-	patterns['asdf'] = ['asd', 'jklo', 'qwertz']
-	patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
-	patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
-	patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
-	generate_pathnames = generate_pathnames(construct_primitive(split_command),patterns)
-	print('generate_pathnames: ' + str(generate_pathnames))
+	#print('text: ' + text)
+	#print('tokens: ' + str(tokens))
+	#split_command = split_command(tokens)
+	#print('split_command: ' + str(split_command))
+	#patterns = dict()
+	#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
+	#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+	#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
+	#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
+	#do_primitive(tokens,patterns)
+	#print('generate_pathnames: ' + str(generate_pathnames))
 	
-	'''do_actions(tokens,[])'''
+	patterns = dict()
+	#patterns['asdf'] = ['asd', 'jklo', 'qwertz']
+	#patterns['asdfg'] = ['yxcv', 'vbnm', 'fghj']
+	#patterns['users asdf'] = [['phil', 'asd'], ['phil', 'jklo'], ['seb', 'jklo']]
+	#patterns['users asdfg'] = [['phil', 'fghj'], ['phil', 'yxcv'], ['seb', 'fghj']]
+	
+	do_actions(tokens,patterns)
 	
 '''test1 = ['ls', '-l', '/directory/', '<<', 'asdf', '>>', '.txt', '/directory/', '<<', 'asdfg', '>>', '.pdf']
 testpattern1 = dict()
