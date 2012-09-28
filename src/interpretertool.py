@@ -19,7 +19,7 @@
 	SEQUENCE ::= ACTION; SEQUENCE
 				 ACTION; ACTION
 
-	SETACTION ::= {[ACTION] ACTION}
+	SETACTION ::= [[ACTION] ACTION]
 
 	LOOP ::= {ACTION}
 
@@ -29,6 +29,10 @@
 				PATTERN<<variable>>TEXT
 
 	TEXT ::= ASCII TEXT
+	
+	Note that output stream redirections are required to be escaped:
+	To redirect Input use: \\<
+	To redirect Output use: \\>
 
 """
 
@@ -37,6 +41,7 @@ import argparse
 import subprocess
 import glob
 import re
+import sys
 
 class Commands :
 	SEQUENCE = 1
@@ -48,6 +53,7 @@ write_token = '\\\\>'
 
 def debug(msg):
 	print('DEBUG: ' + msg)
+	sys.stdout.flush()
 
 def get_next_partial_command(tokens):
 	primitive=[]
@@ -98,7 +104,7 @@ def split_command(original_command):
 
 def generate_pathname(pathname_with_pattern, patterns):
 	tmp_list = ""
-	tokennames = re.findall("<<([a-z]+)>>", pathname_with_pattern)
+	tokennames = re.findall("<<([a-zA-Z0-9_]+)>>", pathname_with_pattern)
 	paths = []
 
 	for tokenname in tokennames:
@@ -128,13 +134,13 @@ def generate_pathname(pathname_with_pattern, patterns):
 	return paths
 
 def cross_product(*args):
-    ans = [[]]
-    for arg in args:
-        ans = [x+[y] for x in ans for y in arg]
-    return ans
+	ans = [[]]
+	for arg in args:
+		ans = [x+[y] for x in ans for y in arg]
+	return ans
 	
 def generate_pathnames(command_list, patterns):
-	print('generate_pathnames: ')
+	debug ('generate_pathnames: ')
 	pattern_list = []
 	pathnames = []
 	tmp_list = ""
@@ -144,7 +150,7 @@ def generate_pathnames(command_list, patterns):
 	for parameter_with_pattern in command_list :
 		paths = generate_pathname(parameter_with_pattern, patterns)
 		
-		tokennames = re.findall("<<([a-z]+)>>", parameter_with_pattern)
+		tokennames = re.findall("<<([a-zA-Z0-9_]+)>>", parameter_with_pattern)
 		
 		if len(paths) > 0 :
 			resolved_pathnames.append(paths)
@@ -169,7 +175,7 @@ def generate_pathnames(command_list, patterns):
 		for result_item, key in zip(pattern_list, tokennames):
 				patterns[key].append(result_item)'''
 
-	print("resolved: " + str(resolved_pathnames))
+	debug ("resolved: " + str(resolved_pathnames))
 
 	return cross_product(*resolved_pathnames)
 	
@@ -204,23 +210,23 @@ def generate_command_list(commands):
 	return command_list
 
 def do_primitive(tokens, patterns):
-	print('do_primitive')
+	debug ('do_primitive')
 	primitive = get_next_partial_command(tokens)
 	
 	split = split_command(tokens)
 	
-	print('split_command: ' + str(split))
-	print('')
+	debug ('split_command: ' + str(split))
+	debug ('')
 	
 	generated_pathnames = generate_pathnames(get_next_partial_command(split),patterns)
 	
-	print('generated_pathnames: ' + str(generated_pathnames))
-	print('')
+	debug ('generated_pathnames: ' + str(generated_pathnames))
+	debug ('')
 	
 	generated_commands = generate_command_list(generated_pathnames)
 	
-	print('generated_commands: ' + str(generated_commands))
-	print('')
+	debug ('generated_commands: ' + str(generated_commands))
+	debug ('')
 	
 	''' This needs to be set to return if a pattern could derive any files '''
 	pattern_matches = False
@@ -239,12 +245,12 @@ def do_primitive(tokens, patterns):
 	while pos < commands_length :
 	
 		command = generated_commands[pos]
-		print(command)
-		print(process)
-		print(next_chained)
+		debug (str(command))
+		debug (str(process))
+		debug (str(next_chained))
 
 		if process != None and next_chained == True :
-			print("process")
+			debug ("process")
 			process_input = process.stdout
 			chained = True 
 		
@@ -270,10 +276,10 @@ def do_primitive(tokens, patterns):
 		debug("stdin: " + str(process_input))
 		debug("stdout: " + str(process_output))
 		process = subprocess.Popen(command, stdin=process_input, stdout=process_output)
-		print(process)
+		debug (str(process))
 	
 		if chained == True :
-			print("asdf")
+			debug ("asdf")
 			process_input.close()
 			process_input = None
 			process.communicate()
@@ -368,8 +374,8 @@ def get_min_token_pos(string):
 	return pos, len(final)
 
 def parse_tokens(string):
+	debug ("FUNCTION: parse_tokens")
 	tuple = get_min_token_pos(string)
-	print(tuple)
 	pos = tuple[0]
 	length = tuple[1]
 	tokens = []
@@ -394,15 +400,14 @@ def parse_tokens(string):
 		pos = tuple[0]
 		length = tuple[1]
 		
-	''' End '''
+	#''' End '''
 	token = string[:]
 	
 	if(len(token.strip()) != 0) :
 				tokens.append(token.strip())
-	
-	for token in tokens :
-		print("\""+ token + "\"")
-	
+
+	debug ("Current list of tokens:" + str(tokens))
+
 	return tokens
 
 def parse_until_end_of(tokens, sign_open, sign_close):
@@ -479,7 +484,7 @@ def do_pattern(tokens, patterns):
 
 	pattern = parse_pattern(tokens)
 
-	print("pattern: " + str(pattern))
+	debug("pattern: " + str(pattern))
 	
 	pattern_matches = add_pattern(pattern, patterns)
 	
@@ -549,10 +554,10 @@ def do_actions(tokens, patterns):
 	length = len(current_tokens)
 	
 	while pos < length :
-		print('do_action')
-		print('pos: ' + str(pos))
-		print('length: ' + str(length))
-		print('tokens: ' + str(current_tokens))
+		debug ('FUNCTION: do_action')
+		debug ('pos: ' + str(pos))
+		debug ('length: ' + str(length))
+		debug ('tokens: ' + str(current_tokens))
 	
 		token = current_tokens[pos]
 		
@@ -606,22 +611,20 @@ def do_actions(tokens, patterns):
 			# default action
 			debug("Encountered command: ")
 			if executeNext == True :
-				print('asdf')
+				debug ('asdf')
 				return_tuple = do_primitive(current_tokens, patterns)
 				last_return_value = return_tuple[0]
 			elif executeNext == False :
 				executeNext = True
-				
 			
 			current_tokens = parse_after_command(current_tokens)
 				
 		pos += 1
 		
 		if len(current_tokens) < length :
-			print('asdf')
-			print(length)
-			print(len(current_tokens))
-			print(pos)
+			debug("Length: " + str(length))
+			debug("Current Tokenlength: " + str(len(current_tokens)))
+			debug("Position: " + str(pos))
 			pos-=(length-len(current_tokens))
 			
 			if pos < 0 :
@@ -629,15 +632,15 @@ def do_actions(tokens, patterns):
 			
 			length = len(current_tokens)
 			
-			print('current_tokens: ' + str(current_tokens))
-			print('length: ' + str(length))
-			print('pos')
+			debug('current_tokens: ' + str(current_tokens))
+			debug('length: ' + str(length))
+			debug('pos')
 			
 	return last_return_value, pattern_matches
 
 """ if __name__ == "__main__": <- Auto generiert """
 
-"Platzhalter, experimentiell"
+#"Platzhalter, experimentiell"
 parser = argparse.ArgumentParser(description='Process and executes configuration files.')
 parser.add_argument('files', metavar='filename', type=open, nargs='+', help='The filenames of the configuration files')
 args = parser.parse_args()
