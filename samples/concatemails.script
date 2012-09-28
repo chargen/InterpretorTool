@@ -1,2 +1,2 @@
-{[samples/files/email-<year>.txt] cat samples/files/email-<<year>>.txt \\>> samples/results/allmails.txt;}
-vim samples/results/allemails.txt
+[[samples/files/email-<year>.txt] cat samples/files/email-<<year>>.txt \\>> samples/results/allmails.txt;]
+vim samples/results/allmails.txt
