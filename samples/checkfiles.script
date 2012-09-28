@@ -1,0 +1,1 @@
+[[samples/files/<file>.pdf] mv samples/files/<file>.pdf samples/results/; echo <file>.pdf \\| cat >> results.log]

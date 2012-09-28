@@ -1,0 +1,6 @@
+Cheese 2 Euro
+Sausage 3 Euro
+Icecreame 1.5 Euro
+Bread 0.5 Euro
+Candy 5 Euro
+Chocholate 2 Euro
